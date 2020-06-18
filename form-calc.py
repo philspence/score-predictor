@@ -6,32 +6,51 @@ from keras.layers import Dense
 
 data = pd.read_csv('merged_noodds.csv', header=0)
 
-moving_avg = data.groupby('HomeTeam')['FTHG'].rolling(window=10).mean().reset_index()
-data['HFAvg'] = moving_avg.set_index('level_1')['FTHG']
-moving_avg = data.groupby('HomeTeam')['FTAG'].rolling(window=10).mean().reset_index()
-data['HAAvg'] = moving_avg.set_index('level_1')['FTAG']
+
+def get_mv_avg(df, key, value, win, newcol):
+    moving_avg = df.groupby(key)[value].rolling(window=win).mean().reset_index()
+    df[newcol] = moving_avg.set_index('level_1')[value]
+    return df
 
 
-moving_avg = data.groupby('AwayTeam')['FTAG'].rolling(window=10).mean().reset_index()
-data['AFAvg'] = moving_avg.set_index('level_1')['FTAG']
-moving_avg = data.groupby('AwayTeam')['FTHG'].rolling(window=10).mean().reset_index()
-data['AAAvg'] = moving_avg.set_index('level_1')['FTHG']
+# HGFAvg = Home Goals For Average, S = Shots
+data = get_mv_avg(data, 'HomeTeam', 'FTHG', 10, 'HGFAvg')
+data = get_mv_avg(data, 'HomeTeam', 'FTAG', 10, 'HGAAvg')
+data = get_mv_avg(data, 'HomeTeam', 'HS', 10, 'HSFAvg')
+data = get_mv_avg(data, 'HomeTeam', 'AS', 10, 'HSAAvg')
+
+data = get_mv_avg(data, 'AwayTeam', 'FTAG', 10, 'AGFAvg')
+data = get_mv_avg(data, 'AwayTeam', 'FTHG', 10, 'AGAAvg')
+data = get_mv_avg(data, 'AwayTeam', 'AS', 10, 'ASFAvg')
+data = get_mv_avg(data, 'AwayTeam', 'HS', 10, 'ASAAvg')
+
+# moving_avg = data.groupby('HomeTeam')['FTHG'].rolling(window=10).mean().reset_index()
+# data['HFAvg'] = moving_avg.set_index('level_1')['FTHG']
+# moving_avg = data.groupby('HomeTeam')['FTAG'].rolling(window=10).mean().reset_index()
+# data['HAAvg'] = moving_avg.set_index('level_1')['FTAG']
+#
+#
+#
+# moving_avg = data.groupby('AwayTeam')['FTAG'].rolling(window=10).mean().reset_index()
+# data['AFAvg'] = moving_avg.set_index('level_1')['FTAG']
+# moving_avg = data.groupby('AwayTeam')['FTHG'].rolling(window=10).mean().reset_index()
+# data['AAAvg'] = moving_avg.set_index('level_1')['FTHG']
 
 data = data.dropna()
 
-Xh = data[['HFAvg', 'AAAvg']].to_numpy()
-Xa = data[['AFAvg', 'HAAvg']].to_numpy()
+Xh = data[['HGFAvg', 'AGAAvg', 'HSFAvg', 'ASAAvg']].to_numpy()
+Xa = data[['AGFAvg', 'HGAAvg', 'ASFAvg', 'HSAAvg']].to_numpy()
 X = np.concatenate((Xh, Xa))
 
 yh = data['FTHG'].to_numpy()
 ya = data['HTAG'].to_numpy()
 y = np.concatenate((yh, ya))
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
 
 
 model = Sequential()
-model.add(Dense(2048, activation='tanh', input_dim=2))
+model.add(Dense(32, activation='relu', input_dim=4))
 #model.add(Dense(1024, activation='tanh'))
 #model.add(Dense(512, activation='tanh'))
 model.add(Dense(1, activation='linear'))
