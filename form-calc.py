@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
+from sklearn.preprocessing import MinMaxScaler
 
 data = pd.read_csv('merged_noodds.csv', header=0)
 
@@ -12,17 +13,17 @@ def get_mv_avg(df, key, value, win, newcol):
     df[newcol] = moving_avg.set_index('level_1')[value]
     return df
 
-
+w = 3
 # HGFAvg = Home Goals For Average, S = Shots
-data = get_mv_avg(data, 'HomeTeam', 'FTHG', 10, 'HGFAvg')
-data = get_mv_avg(data, 'HomeTeam', 'FTAG', 10, 'HGAAvg')
-data = get_mv_avg(data, 'HomeTeam', 'HS', 10, 'HSFAvg')
-data = get_mv_avg(data, 'HomeTeam', 'AS', 10, 'HSAAvg')
+data = get_mv_avg(data, 'HomeTeam', 'FTHG', w, 'HGFAvg')
+data = get_mv_avg(data, 'HomeTeam', 'FTAG', w, 'HGAAvg')
+data = get_mv_avg(data, 'HomeTeam', 'HS', w, 'HSFAvg')
+data = get_mv_avg(data, 'HomeTeam', 'AS', w, 'HSAAvg')
 
-data = get_mv_avg(data, 'AwayTeam', 'FTAG', 10, 'AGFAvg')
-data = get_mv_avg(data, 'AwayTeam', 'FTHG', 10, 'AGAAvg')
-data = get_mv_avg(data, 'AwayTeam', 'AS', 10, 'ASFAvg')
-data = get_mv_avg(data, 'AwayTeam', 'HS', 10, 'ASAAvg')
+data = get_mv_avg(data, 'AwayTeam', 'FTAG', w, 'AGFAvg')
+data = get_mv_avg(data, 'AwayTeam', 'FTHG', w, 'AGAAvg')
+data = get_mv_avg(data, 'AwayTeam', 'AS', w, 'ASFAvg')
+data = get_mv_avg(data, 'AwayTeam', 'HS', w, 'ASAAvg')
 
 # moving_avg = data.groupby('HomeTeam')['FTHG'].rolling(window=10).mean().reset_index()
 # data['HFAvg'] = moving_avg.set_index('level_1')['FTHG']
@@ -38,24 +39,35 @@ data = get_mv_avg(data, 'AwayTeam', 'HS', 10, 'ASAAvg')
 
 data = data.dropna()
 
-Xh = data[['HGFAvg', 'AGAAvg', 'HSFAvg', 'ASAAvg']].to_numpy()
-Xa = data[['AGFAvg', 'HGAAvg', 'ASFAvg', 'HSAAvg']].to_numpy()
+#Xh = data[['HGFAvg', 'AGAAvg', 'HSFAvg', 'ASAAvg']].to_numpy()
+#Xa = data[['AGFAvg', 'HGAAvg', 'ASFAvg', 'HSAAvg']].to_numpy()
+Xh = data[['HGFAvg', 'AGAAvg']].to_numpy()
+Xa = data[['AGFAvg', 'HGAAvg']].to_numpy()
+#Xh = data['HGFAvg'].to_numpy()
+#Xa = data['AGFAvg'].to_numpy()
 X = np.concatenate((Xh, Xa))
 
 yh = data['FTHG'].to_numpy()
 ya = data['HTAG'].to_numpy()
 y = np.concatenate((yh, ya))
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+#scaler = MinMaxScaler()
+#scaler = scaler.fit(X)
+#X = scaler.transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
 
 model = Sequential()
-model.add(Dense(32, activation='relu', input_dim=4))
-#model.add(Dense(1024, activation='tanh'))
-#model.add(Dense(512, activation='tanh'))
-model.add(Dense(1, activation='linear'))
-model.compile(loss='mse', optimizer='adam',  metrics=['mse'])
+model.add(Dense(4, activation='relu', input_dim=2))
+#model.add(Dropout(0.33))
+model.add(Dense(4, activation='relu'))
+model.add(Dense(4, activation='relu'))
+#model.add(Dense(8, activation='relu'))
+#model.add(Dense(8, activation='relu'))
+model.add(Dense(1, activation='selu'))
+model.compile(loss='mae', optimizer='rmsprop',  metrics=['mae'])
 model.fit(X_train, y_train, epochs=10, verbose=1, validation_data=(X_test, y_test))
-
-
-
+y_pred = model.predict(X_test)
+pred_real = list(zip(y_pred, y_test))
+print(pred_real[0:20])
