@@ -29,7 +29,13 @@ y = np.concatenate((yh, ya))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
-model =
+
+model = Sequential()
+model.add(Dense(32, activation='relu', input_dim=2))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='linear'))
+model.compile(loss='mse', optimizer='adam',  metrics=['mse'])
+model.fit(X_train, y_train, epochs=100, verbose=1, validation_data=(X_test, y_test))
 
 
 
