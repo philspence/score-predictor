@@ -14,7 +14,9 @@ def calc_form(infile, w):
     data = data[['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']]
     data['Date'] = pd.to_datetime(data['Date'], infer_datetime_format=True)
     # data = data.loc[data.Date > '01/01/2000']
+    data.sort_values(by=['Date'])
     data = data.dropna()
+    data.drop_duplicates(inplace=True)
     print('Removed excess data')
     
     # HGFAvg = Home Goals For Average, S = Shots
