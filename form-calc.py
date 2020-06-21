@@ -30,16 +30,15 @@ def calc_form(infile, w):
     # data = get_mv_avg(data, 'AwayTeam', 'AS', w, 'ASFAvg')
     # data = get_mv_avg(data, 'AwayTeam', 'HS', w, 'ASAAvg')
     data = data.dropna(subset=['HGFAvg', 'HGAAvg', 'AGFAvg', 'AGAAvg'])
-    data.to_csv(f'{infile}-avgs.csv')
     return data
     
 
 def main(i, o, w):
     data = calc_form(i, w)
-    data.to_csv(o)
+    data.to_csv(f'{o}.csv')
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', dest='infile', type=str, help='CSV file to load', required=True)
     parser.add_argument('-w', dest='window', type=int, default=3, required=False)

@@ -48,5 +48,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     infile = args.infile
     m = args.m
-    window = args.window
     main(infile, m)
