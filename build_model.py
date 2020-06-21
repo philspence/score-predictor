@@ -8,9 +8,9 @@ import argparse
 
 
 def build_model():
-    opt = tf.keras.optimizers.RMSprop(momentum=0.15)
+    opt = tf.keras.optimizers.RMSprop(momentum=0.1)
     model = Sequential()
-    model.add(Dense(4, activation='relu', input_dim=2))
+    model.add(Dense(4, activation='relu', input_dim=4))
     # model.add(Dropout(0.33))
     model.add(Dense(8, activation='relu'))
     model.add(Dense(4, activation='relu'))
@@ -18,7 +18,7 @@ def build_model():
     # model.add(Dense(4, activation='relu'))
     # model.add(Dense(8, activation='relu'))
     model.add(Dense(1, activation='selu'))
-    model.compile(loss='mae', optimizer='rmsprop',  metrics=['mae'])
+    model.compile(loss='mae', optimizer=opt,  metrics=['mae'])
     return model
 
 

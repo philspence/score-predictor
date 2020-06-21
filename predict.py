@@ -3,6 +3,9 @@ import numpy as np
 from keras.models import load_model
 import json
 import argparse
+import pandas as pd
+from itertools import product
+from scipy.stats import ttest_ind, ttest_rel, stats
 
 
 def calc_goals(tms, ha, prop):
@@ -50,15 +53,55 @@ def predict(X, m):
     return yH, ya
 
 
+def percentages(yH, yA):
+    h_range = np.linspace(yH-0.6, yH+0.6, num=12).round(0)
+    a_range = np.linspace(yA+0.6, yA-0.6, num=12).round(0)
+    home = 0
+    away = 0
+    draw = 0
+    num = 0
+    while num < 12:
+        if h_range[num] > a_range[num]:
+            home += 1
+        elif h_range[num] < a_range[num]:
+            away += 1
+        else:
+            draw += 1
+        num += 1
+    return round((home/12)*100), round((away/12)*100), round((draw/12)*100)
+
+
 def post_data(nf, yH, yA):
     num = 0
     for fix in nf:
         nf[fix]['predicted_home_goals'] = round(yH[num].item(), 1)
         nf[fix]['predicted_away_goals'] = round(yA[num].item(), 1)
+        home, away, draw = percentages(yH[num], yA[num])
+        nf[fix]['home_win_percentage'] = home
+        nf[fix]['away_win_percentage'] = away
+        nf[fix]['draw_percentage'] = draw
         print(nf[fix])
         num += 1
     jsonData = json.dumps(nf)
     # requests.post(, jsonData)
+
+
+def load_data_csv(infile):
+    data = pd.read_csv(infile, header=0)
+    Xh = data[['HGFAvg', 'AGAAvg']].to_numpy()
+    Xa = data[['AGFAvg', 'HGAAvg']].to_numpy()
+    X = np.concatenate((Xh, Xa))
+    print(X)
+    return X, data
+
+
+def add_pred_to_csv(data, yH, yA, o):
+    data['PredHG'],  data['PredAG'] = [np.round(yH, 1), np.round(yA, 1)]
+    data.to_csv(o)
+    # y_test_np = np.array([y_test])
+    # y_test_np = np.reshape(y_test_np, (-1, 1))
+    # pred_real = np.append(y_pred, y_test_np, axis=1)
+    # print(np.round(pred_real, 1)[0:20])
 
 
 def main():
@@ -74,22 +117,15 @@ def main():
 
     if target == 'JSON':
         home_teams, away_teams, next_fix = pull_data(gwk)
+        X = get_x(home_teams, away_teams)
+        yH, yA = predict(X, m)
+        post_data(next_fix, yH, yA)
     else:
-        print('Input must be JSON, CSV is not yet supported')
-        exit()
-    X = get_x(home_teams, away_teams)
-    yH, yA = predict(X, m)
-    post_data(next_fix, yH, yA)
+        infile = f'{target}.csv'
+        X, data = load_data_csv(infile)
+        yH, yA = predict(X, m)
+        add_pred_to_csv(data, yH, yA, f'{target}-predictions.csv')
 
 
 if __name__ == '__main__':
     main()
-
-# FOR CSV IMPORT/EXPORT
-# data['PredHG'],  data['PredAG'] = [np.round(yH, 1), np.round(ya, 1)]
-# data.to_csv('merged-EPL-preds.csv')
-# exit()
-# y_test_np = np.array([y_test])
-# y_test_np = np.reshape(y_test_np, (-1, 1))
-# pred_real = np.append(y_pred, y_test_np, axis=1)
-# print(np.round(pred_real, 1)[0:20])
