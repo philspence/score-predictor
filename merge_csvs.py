@@ -6,7 +6,10 @@ path = os.getcwd()
 work_dir = os.path.join(path, league)
 files = [os.path.join(work_dir, file) for file in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, file))]
 csvs = [c for c in files if c.endswith('.csv') and c != 'merged.csv']
-data = [pd.read_csv(c) for c in csvs]
+data = []
+for c in csvs:
+    print(c)
+    data.append(pd.read_csv(c, usecols=['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']))
 data_len = 0
 for d in data:
     data_len += len(d)

@@ -3,7 +3,7 @@ import argparse
 
 
 def get_mv_avg(df, key, value, win, newcol):
-    moving_avg = df.groupby(key)[value].rolling(window=win).mean().reset_index()
+    moving_avg = df.groupby(key)[value].rolling(window=win).mean().shift().reset_index()
     df[newcol] = moving_avg.set_index('level_1')[value]
     return df
 
@@ -11,7 +11,7 @@ def get_mv_avg(df, key, value, win, newcol):
 def calc_form(infile, w):
     data = pd.read_csv(f'{infile}.csv', header=0)
     print('Imported CSV')
-    data = data[['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']]
+    data = data[['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'HS', 'AS', 'HST', 'AST']]
     data['Date'] = pd.to_datetime(data['Date'], infer_datetime_format=True)
     # data = data.loc[data.Date > '01/01/2000']
     data.sort_values(by=['Date'])
@@ -22,14 +22,22 @@ def calc_form(infile, w):
     # HGFAvg = Home Goals For Average, S = Shots
     data = get_mv_avg(data, 'HomeTeam', 'FTHG', w, 'HGFAvg')
     data = get_mv_avg(data, 'HomeTeam', 'FTAG', w, 'HGAAvg')
-    # data = get_mv_avg(data, 'HomeTeam', 'HS', w, 'HSFAvg')
-    # data = get_mv_avg(data, 'HomeTeam', 'AS', w, 'HSAAvg')
+    data = get_mv_avg(data, 'HomeTeam', 'HS', w, 'HSFAvg')
+    data = get_mv_avg(data, 'HomeTeam', 'AS', w, 'HSAAvg')
+    data = get_mv_avg(data, 'HomeTeam', 'HST', w, 'HSTFAvg')
+    data = get_mv_avg(data, 'HomeTeam', 'AST', w, 'HSTAAvg')
 
     data = get_mv_avg(data, 'AwayTeam', 'FTAG', w, 'AGFAvg')
     data = get_mv_avg(data, 'AwayTeam', 'FTHG', w, 'AGAAvg')
-    # data = get_mv_avg(data, 'AwayTeam', 'AS', w, 'ASFAvg')
-    # data = get_mv_avg(data, 'AwayTeam', 'HS', w, 'ASAAvg')
-    data = data.dropna(subset=['HGFAvg', 'HGAAvg', 'AGFAvg', 'AGAAvg'])
+    data = get_mv_avg(data, 'AwayTeam', 'AS', w, 'ASFAvg')
+    data = get_mv_avg(data, 'AwayTeam', 'HS', w, 'ASAAvg')
+    data = get_mv_avg(data, 'AwayTeam', 'AST', w, 'ASTFAvg')
+    data = get_mv_avg(data, 'AwayTeam', 'HST', w, 'ASTAAvg')
+
+    data['HomeStats'] = data.HGFAvg + data.AGAAvg + data.HSFAvg + data.ASAAvg + data.HSTFAvg + data.ASTAAvg
+    data['AwayStats'] = data.AGFAvg + data.HGAAvg + data.ASFAvg + data.HSAAvg + data.ASTFAvg + data.HSTAAvg
+    data = data.dropna(subset=['HGFAvg', 'HGAAvg', 'AGFAvg', 'AGAAvg', 'HSFAvg', 'ASAAvg', 'HSTFAvg', 'ASTAAvg',
+                               'AGFAvg', 'HGAAvg', 'ASFAvg', 'HSAAvg', 'ASTFAvg', 'HSTAAvg'])
     return data
     
 

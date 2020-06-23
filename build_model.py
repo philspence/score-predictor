@@ -1,43 +1,58 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, BatchNormalization, Dropout
 import pandas as pd
 import argparse
+from sklearn.preprocessing import MinMaxScaler, Normalizer
 
 
 def build_model():
-    opt = tf.keras.optimizers.RMSprop(momentum=0.15)
+    opt = tf.keras.optimizers.RMSprop(momentum=0.0)
     model = Sequential()
-    model.add(Dense(4, activation='relu', input_dim=2))
-    # model.add(Dropout(0.33))
+    model.add(Dense(16, activation='relu', input_dim=2))
+    model.add(Dropout(0.5))
     model.add(Dense(8, activation='relu'))
-    model.add(Dense(4, activation='relu'))
-    # model.add(Dense(2, activation='relu'))
-    # model.add(Dense(4, activation='relu'))
-    # model.add(Dense(8, activation='relu'))
-    model.add(Dense(1, activation='selu'))
-    model.compile(loss='mae', optimizer='rmsprop',  metrics=['mae'])
+    model.add(Dense(1, activation='relu'))
+    model.compile(loss='mse', optimizer='nadam',  metrics=['mae', 'mse'])
     return model
 
 
 def load_data(infile):
     data = pd.read_csv(f'{infile}.csv', header=0)
-    Xh = data[['HGFAvg', 'AGAAvg']].to_numpy()
-    Xa = data[['AGFAvg', 'HGAAvg']].to_numpy()
+    # df = data[['HomeStats', 'AwayStats', 'FTHG', 'FTAG']]
+    Xh = data[['HGFAvg', 'AGAAvg']]
+    Xa = data[['AGFAvg', 'HGAAvg']]
+    # Xh, Xa = data['HomeStats'], data['AwayStats']
     X = np.concatenate((Xh, Xa))
-    yh = data['FTHG'].to_numpy()
-    ya = data['FTAG'].to_numpy()
+    # trans_x = MinMaxScaler().fit(X)
+    # norm_X = trans_x.transform(X)
+    yh, ya = data['FTHG'], data['FTAG']
     y = np.concatenate((yh, ya))
-    return X, y
+    # trans_y = MinMaxScaler().fit(y)
+    # norm_y = trans_y.transform(y)
+    # norm_y = norm_y.reshape(-1,)
+    # print(norm_X.shape, norm_y.shape)
+    return X, y, data #, trans_y
 
 
 def main(inf, m_name):
-    X, y = load_data(inf)
+    X, y, data = load_data(inf)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
     model = build_model()
     model.fit(X_train, y_train, epochs=5, verbose=1, validation_data=(X_test, y_test))
+    y_pred = model.predict(X)
+    # y_pred = y_pred.reshape(-1, 1)
+    # unnorm_y = trans.inverse_transform(y_pred)
+    # y_pred = unnorm_y.reshape(-1,)
+    yH, yA = np.split(y_pred, 2)[0], np.split(y_pred, 2)[1]
+    data['H_Pred'], data['A_Pred'] = yH, yA
+    data.to_csv(f'{inf}_preds.csv')
+    print(data.head(10))
+    print(data.tail(10))
     model.save(m_name)
 
 
