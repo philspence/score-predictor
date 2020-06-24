@@ -77,12 +77,13 @@ def post_data(nf, yH, yA):
         nf[fix]['predicted_home_goals'] = round(yH[num].item(), 1)
         nf[fix]['predicted_away_goals'] = round(yA[num].item(), 1)
         home, away, draw = percentages(yH[num], yA[num])
-        nf[fix]['home_win_percentage'] = home
-        nf[fix]['away_win_percentage'] = away
-        nf[fix]['draw_percentage'] = draw
+        # nf[fix]['home_win_percentage'] = home
+        # nf[fix]['away_win_percentage'] = away
+        # nf[fix]['draw_percentage'] = draw
         print(nf[fix])
         num += 1
     jsonData = json.dumps(nf)
+    print(nf)
     # requests.post(, jsonData)
 
 
