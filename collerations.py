@@ -2,19 +2,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('top_leagues/EPL-merged-avgs.csv', index_col=0)
-data.dropna(inplace=True)
+data = pd.read_csv('all/all_merged.csv', index_col=0)
 
 corr = data.corr()
 print(corr.to_string())
-
-data = pd.read_csv('top_leagues/EPL-merged.csv', index_col=0)
-data = data.iloc[:, 0:29]
-data.dropna(inplace=True)
-
-corr = data.corr()
-print(corr.to_string())
-
 
 # fig = plt.figure()
 # ax = fig.add_subplot(111)

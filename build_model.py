@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
@@ -13,10 +13,10 @@ from sklearn.preprocessing import MinMaxScaler, Normalizer
 def build_model():
     opt = tf.keras.optimizers.RMSprop(momentum=0.0)
     model = Sequential()
-    model.add(Dense(16, activation='relu', input_dim=2))
-    model.add(Dropout(0.5))
+    model.add(Dense(16, activation='relu', input_dim=1))
+    model.add(Dropout(0.2))
     model.add(Dense(8, activation='relu'))
-    model.add(Dense(1, activation='relu'))
+    model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer='nadam',  metrics=['mae', 'mse'])
     return model
 
@@ -24,19 +24,19 @@ def build_model():
 def load_data(infile):
     data = pd.read_csv(f'{infile}.csv', header=0)
     # df = data[['HomeStats', 'AwayStats', 'FTHG', 'FTAG']]
-    Xh = data[['HGFAvg', 'AGAAvg']]
-    Xa = data[['AGFAvg', 'HGAAvg']]
-    # Xh, Xa = data['HomeStats'], data['AwayStats']
+    Xh = data['HStats']
+    Xa = data['AStats']
     X = np.concatenate((Xh, Xa))
-    # trans_x = MinMaxScaler().fit(X)
-    # norm_X = trans_x.transform(X)
+    X = X.reshape(-1, 1)
+    trans_x = MinMaxScaler().fit(X)
+    norm_X = trans_x.transform(X)
+    print(norm_X)
     yh, ya = data['FTHG'], data['FTAG']
     y = np.concatenate((yh, ya))
     # trans_y = MinMaxScaler().fit(y)
     # norm_y = trans_y.transform(y)
     # norm_y = norm_y.reshape(-1,)
-    # print(norm_X.shape, norm_y.shape)
-    return X, y, data #, trans_y
+    return norm_X, y, data
 
 
 def main(inf, m_name):

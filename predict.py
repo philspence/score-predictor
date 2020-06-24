@@ -83,8 +83,9 @@ def post_data(nf, yH, yA):
         print(nf[fix])
         num += 1
     jsonData = json.dumps(nf)
-    print(nf)
-    # requests.post(, jsonData)
+    with open('predictions.json', 'w') as f:
+        json.dump(nf, f)
+    requests.post('https://api.teamto.win/v1/savePrediction.php', jsonData)
 
 
 def load_data_csv(infile):
