@@ -1,6 +1,30 @@
 Notes for Football Data
 
-All data is in csv format, ready for use within standard spreadsheet applications. Please note that some abbreviations are no longer in use (in particular odds from specific bookmakers no longer used) and refer to data collected in earlier seasons. For a current list of what bookmakers are included in the dataset please visit http://www.football-data.co.uk/matches.php
+All data is in csv format, ready for use within standard spreadsheet applications. Please note that some abbreviations
+are no longer in use (in particular odds from specific bookmakers no longer used) and refer to data collected in
+earlier seasons. For a current list of what bookmakers are included in the dataset please visit
+http://www.football-data.co.uk/matches.php
+
+ADDED:
+
+All averages are calculated by a 3 game moving window that has been shifted by 1 week to not include the gameweek
+that it is reported in, i.e. the previous 3 games up to that fixture. This is done on a per season basis so there will
+be no data for the first 6 games of every season for each team
+
+HW = Binary value for a Home win, either 0 or 1
+AW = Same as above but for Away win
+D = Same as above but for Draw
+HP = Points acquired by Home team from the match
+AP = Points acquired by Away team from the match
+HPMean = Mean wins (1.0 = 100% wins) across the season so far, after the initial window perdiod (3) games at Home
+APMean = As above but Away
+HPAvg = Rolling average of points (1.0 = 100% wins) over the window period matches played at Home
+APAvg = As above but Away
+HGFAvg = Average goals scored by the team over the window period, when playing at Home
+HGAAvg = Average goals conceded by the team when playing at Home
+AGFAvg = Average goals scored by the team over the window period, when playing Away
+AGAAvg = Average goals conceded by the team when playing Away
+
 
 Key to results data:
 
@@ -40,9 +64,12 @@ AR = Away Team Red Cards
 HBP = Home Team Bookings Points (10 = yellow, 25 = red)
 ABP = Away Team Bookings Points (10 = yellow, 25 = red)
 
-Note that Free Kicks Conceeded includes fouls, offsides and any other offense commmitted and will always be equal to or higher than the number of fouls. Fouls make up the vast majority of Free Kicks Conceded. Free Kicks Conceded are shown when specific data on Fouls are not available (France 2nd, Belgium 1st and Greece 1st divisions).
+Note that Free Kicks Conceeded includes fouls, offsides and any other offense commmitted and will always be equal to or
+higher than the number of fouls. Fouls make up the vast majority of Free Kicks Conceded. Free Kicks Conceded are shown
+when specific data on Fouls are not available (France 2nd, Belgium 1st and Greece 1st divisions).
 
-Note also that English and Scottish yellow cards do not include the initial yellow card when a second is shown to a player converting it into a red, but this is included as a yellow (plus red) for European games.
+Note also that English and Scottish yellow cards do not include the initial yellow card when a second is shown to a
+player converting it into a red, but this is included as a yellow (plus red) for European games.
 
 
 Key to 1X2 (match) betting odds data:
@@ -157,7 +184,8 @@ Closing odds (last odds before match starts)
 
 As above but with an additional "C" character following the bookmaker abbreviation/Max/Avg
 
-Football-Data would like to acknowledge the following sources which have been utilised in the compilation of Football-Data's results and odds files.
+Football-Data would like to acknowledge the following sources which have been utilised in the compilation of
+Football-Data's results and odds files.
 
 
 Current results (full time, half time)
@@ -171,5 +199,6 @@ Individual bookmakers
 
 Betting odds for weekend games are collected Friday afternoons, and on Tuesday afternoons for midweek games.
 
-Additional match statistics (corners, shots, bookings, referee etc.) for the 2000/01 and 2001/02 seasons for the English, Scottish and German leagues were provided by Sports.com (now under new ownership and no longer available).
+Additional match statistics (corners, shots, bookings, referee etc.) for the 2000/01 and 2001/02 seasons for the
+English, Scottish and German leagues were provided by Sports.com (now under new ownership and no longer available).
 

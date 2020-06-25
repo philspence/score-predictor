@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('all/all_merged.csv', index_col=0)
-
+data = pd.read_csv('all/all_merged_avgs.csv', index_col=0, header=0)
 corr = data.corr()
+print(corr.to_csv('correlations.csv'))
 print(corr.to_string())
 
 # fig = plt.figure()
