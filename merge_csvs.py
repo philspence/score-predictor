@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-league = 'all'
+league = 'top_leagues/EPL'
 path = os.getcwd()
 work_dir = os.path.join(path, league)
 files = [os.path.join(work_dir, file) for file in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, file))]
@@ -16,7 +16,8 @@ for c in csvs:
         df.dropna(inplace=True, subset=['Date'])
         df.dropna(inplace=True, axis=1, how='all')
         df.drop_duplicates(inplace=True)
-        df['Date'] = pd.to_datetime(df.Date)
+        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
+            # fillna(pd.to_datetime(df['Date'], format='%d/%m/%y', errors="coerce"))
         df.sort_values(by=['Date'])
         start = pd.DatetimeIndex(df['Date']).year.min()
         end = pd.DatetimeIndex(df['Date']).year.max()
@@ -31,5 +32,5 @@ for d in data:
     data_len += len(d)
 all_data = pd.concat(data, ignore_index=True)
 print(f'Total matches: {data_len}')
-all_data.to_csv(os.path.join('all', f'{league}_merged.csv'))
+all_data.to_csv(os.path.join(f'{league}_merged.csv'))
 

@@ -7,23 +7,29 @@ http://www.football-data.co.uk/matches.php
 
 ADDED:
 
-All averages are calculated by a 3 game moving window that has been shifted by 1 week to not include the gameweek
-that it is reported in, i.e. the previous 3 games up to that fixture. This is done on a per season basis so there will
-be no data for the first 6 games of every season for each team
+All averages are calculated by a 5 game moving window (minimum 3 data points) that has been shifted by 1 week to not
+include the gameweekthat it is reported in, i.e. the previous 5 games up to that fixture. This is done on a per season
+basis so there will be no data for the first 6 games of every season for each team
 
 HW = Binary value for a Home win, either 0 or 1
 AW = Same as above but for Away win
 D = Same as above but for Draw
 HP = Points acquired by Home team from the match
 AP = Points acquired by Away team from the match
-HPMean = Mean wins (1.0 = 100% wins) across the season so far, after the initial window perdiod (3) games at Home
-APMean = As above but Away
-HPAvg = Rolling average of points (1.0 = 100% wins) over the window period matches played at Home
-APAvg = As above but Away
-HGFAvg = Average goals scored by the team over the window period, when playing at Home
-HGAAvg = Average goals conceded by the team when playing at Home
-AGFAvg = Average goals scored by the team over the window period, when playing Away
-AGAAvg = Average goals conceded by the team when playing Away
+HWinPerc = Mean wins (1.0 = 100% wins) across the season so far, after the initial window perdiod (3) games at Home
+AWinPerc = As above but Away
+HP5Avg = Rolling average of points (1.0 = 100% wins) over the window period matches played at Home
+AP5Avg = As above but Away
+HGF5Avg = Average goals scored by the team over the window period, when playing at Home
+HGA5Avg = Average goals conceded by the team when playing at Home
+AGF5Avg = Average goals scored by the team over the window period, when playing Away
+AGA5Avg = Average goals conceded by the team when playing Away
+HPEWM = All EWMs are the same as their Avg counterparts but use Exponential Weighted Mean instead of Mean
+APEWM =
+HGFEWM =
+HGAEWM =
+AGFEWM =
+AGAEWM =
 
 
 Key to results data:
