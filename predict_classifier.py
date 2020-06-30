@@ -5,7 +5,7 @@ import json
 import pickle
 import argparse
 from keras.utils import to_categorical
-from itertools import product
+from itertools import permutations, product
 
 
 def calc_avg(tms, ha):
@@ -85,9 +85,9 @@ def get_x(home, away):
     away_X = np.hstack((away_mean_win.reshape(-1, 1), home_mean_win.reshape(-1, 1)))
     all_X = np.concatenate((home_X, away_X), axis=0)
     # this reflects the HPAvg, APAvg, HPMean, APMean used in building the model
-    outcome_X = np.hstack((home_mean_win.reshape(-1, 1), away_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1),
-                           away_avg_win.reshape(-1, 1)))
-    return outcome_X, all_X
+    # outcome_X = np.hstack((home_mean_win.reshape(-1, 1), away_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1),
+    #                        away_avg_win.reshape(-1, 1)))
+    return all_X
 
 
 def predict(X, m):
@@ -112,26 +112,35 @@ def ohe_to_goals(y):
         match = np.where(i == np.amax(i))[0]
         goals.append(match)
         probs.append(np.amax(i))
-        print(i)
         num = 0
         for goal in i:
             gp_dict[num] = goal
             num += 1
         goal_probs.append(gp_dict)
+    outcome_prob = []
+    perms = list(product(list(range(0, 10)), repeat=2))
     for team in range(0, 10):
         home = goal_probs[team]
         away = goal_probs[team+10]
-        perms = [(x, y) for x in home for y in away]
-        print(perms)
-        exit()
-    return np.array(goals), np.array(probs)
+        h_chance = 0
+        a_chance = 0
+        draw = 0
+        for perm in perms:
+            if perm[0] > perm[1]:
+                h_chance += (home[perm[0]] * away[perm[1]])
+            elif perm[0] < perm[1]:
+                a_chance += (home[perm[0]] * away[perm[1]])
+            elif perm[0] == perm[1]:
+                draw += (home[perm[0]] * away[perm[1]])
+        outcome_prob.append([h_chance, a_chance, draw])
+    return np.array(goals), np.array(probs), np.array(outcome_prob)
 
 
 def predict_score(X):
     model = load_model('best_score_cat_model.h5')
     y_pred = model.predict(X)
-    goals, probs = ohe_to_goals(y_pred)
-    return goals, probs
+    goals, probs, outcome = ohe_to_goals(y_pred)
+    return goals, probs, outcome
 
 
 def post_data(nf, o_pred, s_pred, s_prob):
@@ -140,30 +149,29 @@ def post_data(nf, o_pred, s_pred, s_prob):
     spH, spA = np.split(s_prob, 2)[0], np.split(s_prob, 2)[1]
     num = 0
     for fix in nf:
-        nf[fix]['home_percentage'] = round(oH[num].item(), 4) * 100
-        nf[fix]['away_percentage'] = round(oA[num].item(), 4) * 100
-        nf[fix]['draw_percentage'] = round(oD[num].item(), 4) * 100
+        nf[fix]['home_percentage'] = round(oH[num].item() * 100, 2)
+        nf[fix]['away_percentage'] = round(oA[num].item() * 100, 2)
+        nf[fix]['draw_percentage'] = round(oD[num].item() * 100, 2)
         nf[fix]['predicted_home_goals'] = int(sH[num].item())
         nf[fix]['predicted_away_goals'] = int(sA[num].item())
-        nf[fix]['percentage'] = ((spH[num].item() + spA[num].item()) / 2) * 100
+        nf[fix]['percentage'] = round((spH[num].item() * spA[num].item()) * 100, 2)
         num += 1
-    jsonData = json.dumps(nf)
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
     print(nf)
-    # requests.post('https://api.teamto.win/v1/savePrediction.php', jsonData)
+    requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
 
 
 def main(gwk, mo):
     home_teams, away_teams, next_fix = pull_data(gwk)
-    outcome_X, score_X = get_x(home_teams, away_teams)
-    outcome_pred = predict(outcome_X, mo)
+    score_X = get_x(home_teams, away_teams)
+    # outcome_pred = predict(outcome_X, mo)
     # score_x = get_score_x(home_teams, away_teams)
     # X_outcome = np.hstack((score_x, outcome_pred[:, 0].reshape(-1, 1), outcome_pred[:, 1].reshape(-1, 1),
     #                        outcome_pred[:, 2].reshape(-1, 1)))
     # X_outcome = np.hstack((X[:, 0].reshape(-1, 1), X[:, 1].reshape(-1, 1), outcome_pred[0][:, 1].reshape(-1, 1),
     #                        outcome_pred[1][:, 1].reshape(-1, 1)))
-    score_pred, score_prob = predict_score(score_X)
+    score_pred, score_prob, outcome_pred = predict_score(score_X)
     post_data(next_fix, outcome_pred, score_pred, score_prob)
 
 
@@ -179,7 +187,7 @@ if __name__ == '__main__':
         gwk = args.week
         m_outcome = args.model_outcome
     except:
-        gwk = 41
+        gwk = 40
         m_outcome = 'cat_best_model'
         m_score = 'best_score_cat_model'
     finally:
