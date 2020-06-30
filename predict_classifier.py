@@ -6,6 +6,7 @@ import pickle
 import argparse
 from keras.utils import to_categorical
 from itertools import permutations, product
+import matplotlib.pyplot as plt
 
 
 def calc_avg(tms, ha):
@@ -21,7 +22,6 @@ def calc_avg(tms, ha):
                 win_avg += wld_dict[val]
                 num += 1
         avg_wins.append(win_avg / num)
-        # print(f'{t}: {avg_wins}')
     np_arr = np.array([avg_wins])
     np_arr = np_arr.reshape(-1, 1)
     return np_arr
@@ -33,7 +33,6 @@ def calc_mean(tms, ha):
         form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}').json()
         win_ratio = form['season_form'][ha]['win_percentage']
         mean_wins.append(win_ratio/100)
-    # print(f'{t}: {mean_wins}')
     np_arr = np.array([mean_wins])
     np_arr = np_arr.reshape(-1, 1)
     return np_arr
@@ -81,25 +80,31 @@ def get_x(home, away):
     home_mean_win = calc_mean(home, 'home')
     away_mean_win = calc_mean(away, 'away')
     home_X = np.hstack((home_mean_win.reshape(-1, 1), away_mean_win.reshape(-1, 1)))
-                        # home_avg_win.reshape(-1, 1), away_avg_win.reshape(-1, 1)))
     away_X = np.hstack((away_mean_win.reshape(-1, 1), home_mean_win.reshape(-1, 1)))
     all_X = np.concatenate((home_X, away_X), axis=0)
     # this reflects the HPAvg, APAvg, HPMean, APMean used in building the model
-    # outcome_X = np.hstack((home_mean_win.reshape(-1, 1), away_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1),
-    #                        away_avg_win.reshape(-1, 1)))
     return all_X
-
-
-def predict(X, m):
-    # with open('random_forest_cat.pickle', 'rb') as p:
-    #     model = pickle.load(p)
-    model = load_model('cat_best_model.h5')
-    y_pred = model.predict_proba(X)
-    return y_pred
 
 
 def onehot_enc_goals(df, goals):
     return to_categorical(df[goals])
+
+
+def plot_goal_probs(h, a):
+    h_probs = [v for k, v in h.items()]
+    a_probs = [v for k, v in a.items()]
+    x = np.arange(len(h_probs))
+    width = 0.35
+    fig, ax = plt.subplots()
+    ax.bar(x - width/2, h_probs, width, label='Home')
+    ax.bar(x + width/2, a_probs, width, label='Away')
+    ax.set_ylabel('Probability')
+    ax.set_title('Predicted Goals')
+    ax.legend()
+    fig.tight_layout()
+    plt.savefig('Liverpool-Palace.png', dpi=300)
+    plt.show()
+    exit()
 
 
 def ohe_to_goals(y):
@@ -122,6 +127,7 @@ def ohe_to_goals(y):
     for team in range(0, 10):
         home = goal_probs[team]
         away = goal_probs[team+10]
+        plot_goal_probs(home, away)
         h_chance = 0
         a_chance = 0
         draw = 0
@@ -136,8 +142,8 @@ def ohe_to_goals(y):
     return np.array(goals), np.array(probs), np.array(outcome_prob)
 
 
-def predict_score(X):
-    model = load_model('best_score_cat_model.h5')
+def predict_score(X, m):
+    model = load_model(f'{m}.h5')
     y_pred = model.predict(X)
     goals, probs, outcome = ohe_to_goals(y_pred)
     return goals, probs, outcome
@@ -159,19 +165,13 @@ def post_data(nf, o_pred, s_pred, s_prob):
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
     print(nf)
-    requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
+    # requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
 
 
-def main(gwk, mo):
+def main(gwk, m):
     home_teams, away_teams, next_fix = pull_data(gwk)
     score_X = get_x(home_teams, away_teams)
-    # outcome_pred = predict(outcome_X, mo)
-    # score_x = get_score_x(home_teams, away_teams)
-    # X_outcome = np.hstack((score_x, outcome_pred[:, 0].reshape(-1, 1), outcome_pred[:, 1].reshape(-1, 1),
-    #                        outcome_pred[:, 2].reshape(-1, 1)))
-    # X_outcome = np.hstack((X[:, 0].reshape(-1, 1), X[:, 1].reshape(-1, 1), outcome_pred[0][:, 1].reshape(-1, 1),
-    #                        outcome_pred[1][:, 1].reshape(-1, 1)))
-    score_pred, score_prob, outcome_pred = predict_score(score_X)
+    score_pred, score_prob, outcome_pred = predict_score(score_X, m)
     post_data(next_fix, outcome_pred, score_pred, score_prob)
 
 
@@ -179,16 +179,13 @@ if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser()
         parser.add_argument('-w', dest='week', type=int, help='Gameweek Number', required=True)
-        parser.add_argument('-mo', dest='model_outcome', type=str, help='Name of outcome model to use, no extension',
-                            required=True)
-        parser.add_argument('-ms', dest='model_score', type=str, help='Name of score model, no extension',
+        parser.add_argument('-m', dest='model_score', type=str, help='Name of score model, no extension',
                             required=True)
         args = parser.parse_args()
         gwk = args.week
-        m_outcome = args.model_outcome
+        m_score = args.model_score
     except:
         gwk = 40
-        m_outcome = 'cat_best_model'
-        m_score = 'best_score_cat_model'
+        m_score = 'best_score_cat_model-BACKUP'
     finally:
-        main(gwk, m_outcome)
+        main(gwk, m_score)

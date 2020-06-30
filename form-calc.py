@@ -28,7 +28,7 @@ def get_ewm(df, key, value, newcol):
 def calc_form(infile, w):
     data = pd.read_csv(f'{infile}.csv', header=0, index_col=0, infer_datetime_format=True)
     print('Imported CSV')
-    columns = ['Season', 'Div', 'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'HS', 'AS', 'HST', 'AST']
+    columns = ['Season', 'Div', 'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR']
     data = data[columns]
     data['Date'] = pd.to_datetime(data['Date'])
     data = data.dropna()
@@ -53,32 +53,32 @@ def calc_form(infile, w):
     data = get_mv_avg(data, 'HomeTeam', 'FTAG', w, 'HGA5Avg')
     data = get_ewm(data, 'HomeTeam', 'FTHG', 'HGFEWM')
     data = get_ewm(data, 'HomeTeam', 'FTAG', 'HGAEWM')
-    data = get_mv_avg(data, 'HomeTeam', 'HS', w, 'HSFAvg')
-    data = get_mv_avg(data, 'HomeTeam', 'AS', w, 'HSAAvg')
-    data = get_mv_avg(data, 'HomeTeam', 'HST', w, 'HSTFAvg')
-    data = get_mv_avg(data, 'HomeTeam', 'AST', w, 'HSTAAvg')
+    # data = get_mv_avg(data, 'HomeTeam', 'HS', w, 'HSFAvg')
+    # data = get_mv_avg(data, 'HomeTeam', 'AS', w, 'HSAAvg')
+    # data = get_mv_avg(data, 'HomeTeam', 'HST', w, 'HSTFAvg')
+    # data = get_mv_avg(data, 'HomeTeam', 'AST', w, 'HSTAAvg')
     # #
     data = get_mv_avg(data, 'AwayTeam', 'FTAG', w, 'AGF5Avg')
     data = get_mv_avg(data, 'AwayTeam', 'FTHG', w, 'AGA5Avg')
     data = get_ewm(data, 'AwayTeam', 'FTAG', 'AGFEWM')
     data = get_ewm(data, 'AwayTeam', 'FTHG', 'AGAEWM')
-    data = get_mv_avg(data, 'AwayTeam', 'AS', w, 'ASFAvg')
-    data = get_mv_avg(data, 'AwayTeam', 'HS', w, 'ASAAvg')
-    data = get_mv_avg(data, 'AwayTeam', 'AST', w, 'ASTFAvg')
-    data = get_mv_avg(data, 'AwayTeam', 'HST', w, 'ASTAAvg')
+    # data = get_mv_avg(data, 'AwayTeam', 'AS', w, 'ASFAvg')
+    # data = get_mv_avg(data, 'AwayTeam', 'HS', w, 'ASAAvg')
+    # data = get_mv_avg(data, 'AwayTeam', 'AST', w, 'ASTFAvg')
+    # data = get_mv_avg(data, 'AwayTeam', 'HST', w, 'ASTAAvg')
 
 
     # data['HomeStats'] = data.HGFAvg + data.AGAAvg + data.HSFAvg + data.ASAAvg + data.HSTFAvg + data.ASTAAvg
     # data['AwayStats'] = data.AGFAvg + data.HGAAvg + data.ASFAvg + data.HSAAvg + data.ASTFAvg + data.HSTAAvg
-    newcols = ['HGF5Avg', 'AGF5Avg', 'HP5Avg', 'AP5Avg', 'HWinPerc', 'AWinPerc', 'HSFAvg', 'ASFAvg']
+    newcols = ['HGF5Avg', 'AGF5Avg', 'HP5Avg', 'AP5Avg', 'HWinPerc', 'AWinPerc']
+               # 'HSFAvg', 'ASFAvg']
     data = data.dropna(subset=newcols)
     return data
     
 
 def main(i, o, w):
     data = calc_form(i, w)
-    print(data[(data.HomeTeam == 'Arsenal') & (data.Season == '2000_2001')].tail(10).to_string())
-    data.to_csv(f'{o}_shots_test.csv')
+    data.to_csv(f'{o}.csv')
 
 
 if __name__ == '__main__':
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         window = args.window
         outfile = f'{infile}_avgs'
     except:
-        infile = 'top_leagues/EPL_merged'
+        infile = 'all/all_merged'
         window = 5
         outfile = f'{infile}_avgs'
     finally:

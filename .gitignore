@@ -18,4 +18,13 @@
 /top_leagues/EPL-merged-avgs_preds.csv
 /top_leagues/LaLiga-merged.csv
 /top_leagues/SerieA-merged.csv
-/top_leagues/
+accuracy.py
+build_model.py
+build_model_classifier.py
+correlations.png
+correlations.ods
+correlations.csv
+data_scraper.py
+FPL-predictor.py
+predict.py
+predictions.json
