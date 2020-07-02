@@ -19,12 +19,12 @@ import pickle
 def build_model():
     opt = tf.keras.optimizers.RMSprop(learning_rate=0.01, momentum=0.01)  # LR default = 0.001, Mom=0.0
     model = Sequential()
-    model.add(Dense(4, activation='relu', input_dim=4))
+    model.add(Dense(24, activation='relu', input_dim=4))
     # model.add(Dropout(0.2))
-    model.add(Dense(10, activation='relu'))
+    model.add(Dense(12, activation='relu'))
     # model.add(Dense(16, activation='relu'))
     model.add(Dense(10, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy', 'categorical_accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', 'categorical_accuracy'])
     return model
 
 

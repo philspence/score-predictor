@@ -13,7 +13,7 @@ def calc_avg(tms, ha):
     wld_dict = {'W': 1, 'L': 0, 'D': 0}
     avg_wins = []
     for t in tms:
-        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=3').json()
+        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=5').json()
         win_avg = 0
         num = 0
         while num < 3:
@@ -41,7 +41,7 @@ def calc_mean(tms, ha):
 def calc_goals(tms, ha, prop):
     avg_goals = []
     for t in tms:
-        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=3').json()
+        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=5').json()
         goals = 0
         for match in form[ha]:
             if match == 'form':
@@ -79,8 +79,10 @@ def get_x(home, away):
     away_avg_win = calc_avg(away, 'away_form')
     home_mean_win = calc_mean(home, 'home')
     away_mean_win = calc_mean(away, 'away')
-    home_X = np.hstack((home_mean_win.reshape(-1, 1), away_mean_win.reshape(-1, 1)))
-    away_X = np.hstack((away_mean_win.reshape(-1, 1), home_mean_win.reshape(-1, 1)))
+    home_X = np.hstack((home_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1),
+                        away_mean_win.reshape(-1, 1), away_avg_win.reshape(-1, 1)))
+    away_X = np.hstack((away_mean_win.reshape(-1, 1), away_avg_win.reshape(-1, 1),
+                        home_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1)))
     all_X = np.concatenate((home_X, away_X), axis=0)
     # this reflects the HPAvg, APAvg, HPMean, APMean used in building the model
     return all_X
@@ -104,7 +106,6 @@ def plot_goal_probs(h, a):
     fig.tight_layout()
     plt.savefig('Liverpool-Palace.png', dpi=300)
     plt.show()
-    exit()
 
 
 def ohe_to_goals(y):
@@ -127,7 +128,7 @@ def ohe_to_goals(y):
     for team in range(0, 10):
         home = goal_probs[team]
         away = goal_probs[team+10]
-        plot_goal_probs(home, away)
+        # plot_goal_probs(home, away)
         h_chance = 0
         a_chance = 0
         draw = 0
@@ -162,9 +163,10 @@ def post_data(nf, o_pred, s_pred, s_prob):
         nf[fix]['predicted_away_goals'] = int(sA[num].item())
         nf[fix]['percentage'] = round((spH[num].item() * spA[num].item()) * 100, 2)
         num += 1
+        print(nf[fix])
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
-    print(nf)
+    # print(nf)
     # requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
 
 
@@ -186,6 +188,6 @@ if __name__ == '__main__':
         m_score = args.model_score
     except:
         gwk = 40
-        m_score = 'best_score_cat_model-BACKUP'
+        m_score = 'best_score_cat_model'
     finally:
         main(gwk, m_score)
