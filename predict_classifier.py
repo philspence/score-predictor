@@ -7,6 +7,7 @@ import argparse
 from keras.utils import to_categorical
 from itertools import permutations, product
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def calc_avg(tms, ha):
@@ -143,6 +144,11 @@ def ohe_to_goals(y):
     return np.array(goals), np.array(probs), np.array(outcome_prob)
 
 
+def get_3D_XY(df):
+    teams_3D = [df.groupby(['HomeTeam', 'Season'])['FTHG'].unique()]
+    return teams_3D
+
+
 def predict_score(X, m):
     model = load_model(f'{m}.h5')
     y_pred = model.predict(X)
@@ -167,10 +173,11 @@ def post_data(nf, o_pred, s_pred, s_prob):
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
     # print(nf)
-    # requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
+    requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
 
 
 def main(gwk, m):
+    # teams = get_3D_XY(pd.read_csv('top_leagues/EPL_merged_avgs.csv', header=0, index_col=0, infer_datetime_format=True))
     home_teams, away_teams, next_fix = pull_data(gwk)
     score_X = get_x(home_teams, away_teams)
     score_pred, score_prob, outcome_pred = predict_score(score_X, m)
@@ -187,7 +194,7 @@ if __name__ == '__main__':
         gwk = args.week
         m_score = args.model_score
     except:
-        gwk = 40
+        gwk = 45
         m_score = 'best_score_cat_model'
     finally:
         main(gwk, m_score)

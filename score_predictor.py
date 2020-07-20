@@ -21,7 +21,7 @@ def build_model():
     model = Sequential()
     model.add(Dense(24, activation='relu', input_dim=4))
     # model.add(Dropout(0.2))
-    model.add(Dense(12, activation='relu'))
+    model.add(Dense(24, activation='relu'))
     # model.add(Dense(16, activation='relu'))
     model.add(Dense(10, activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', 'categorical_accuracy'])

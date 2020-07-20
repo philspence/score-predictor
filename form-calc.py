@@ -91,7 +91,7 @@ if __name__ == '__main__':
         window = args.window
         outfile = f'{infile}_avgs'
     except:
-        infile = 'all/all_merged'
+        infile = 'top_leagues/EPL_merged.csv'
         window = 5
         outfile = f'{infile}_avgs'
     finally:
