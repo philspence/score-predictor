@@ -39,7 +39,7 @@ def build_model():
 
 
 def load_data(infile):
-    data = pd.read_csv(f'{infile}.csv', header=0, index_col=0)
+    data = pd.read_csv(f'{infile}.csv', header=0)
     # load the CSV of the data as a dataframe, uses the first row as the headers for each column
     X = data[['HWinPerc', 'AWinPerc', 'HP5Avg', 'AP5Avg']].to_numpy()  # use the headers to extract the correct columns...
     # average home points, average away points, the "input_dim" for the first layer of the model should reflect how

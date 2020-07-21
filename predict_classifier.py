@@ -12,23 +12,33 @@ import pandas as pd
 
 def calc_avg(tms, ha):
     wld_dict = {'W': 1, 'L': 0, 'D': 0}
-    avg_wins = []
+    loc_wins = []
+    form_wins = []
+    season_wins = []
     for t in tms:
-        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=5').json()
-        win_avg = 0
+        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=3').json()
+        loc_win_avg = 0
+        for match in form[ha]['form']:
+            val = form[ha]['form'][match]
+            loc_win_avg += wld_dict[val]
+        loc_wins.append(loc_win_avg / 3)
         num = 0
-        while num < 3:
-            for match in form[ha]['form']:
-                val = form[ha]['form'][match]
-                win_avg += wld_dict[val]
+        wins = 0
+        while num < 5:
+            for match in form['all_form']:
+                if form['all_form'][match] == 'W':
+                    wins += 1
                 num += 1
-        avg_wins.append(win_avg / num)
-    np_arr = np.array([avg_wins])
-    np_arr = np_arr.reshape(-1, 1)
-    return np_arr
+        form_wins.append(wins / 5)
+        win_ratio = (form['season_form']['home']['win_percentage'] + form['season_form']['away']['win_percentage']) / 2
+        season_wins.append(win_ratio / 100)
+    loc_wins = np.array(loc_wins).reshape(-1, 1)
+    form_wins = np.array(form_wins).reshape(-1, 1)
+    season_wins = np.array(season_wins).reshape(-1, 1)
+    return loc_wins, form_wins, season_wins
 
 
-def calc_mean(tms, ha):
+def calc_season(tms, ha):
     mean_wins = []
     for t in tms:
         form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}').json()
@@ -75,18 +85,20 @@ def get_score_x(home, away):
     return all
 
 
+def stack_concat(arr1, arr2):
+    arr12 = np.hstack((arr1, arr2))
+    arr21 = np.hstack((arr2, arr1))
+    arr = np.concatenate((arr12, arr21), axis=0)
+    return arr
+
+
 def get_x(home, away):
-    home_avg_win = calc_avg(home, 'home_form')
-    away_avg_win = calc_avg(away, 'away_form')
-    home_mean_win = calc_mean(home, 'home')
-    away_mean_win = calc_mean(away, 'away')
-    home_X = np.hstack((home_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1),
-                        away_mean_win.reshape(-1, 1), away_avg_win.reshape(-1, 1)))
-    away_X = np.hstack((away_mean_win.reshape(-1, 1), away_avg_win.reshape(-1, 1),
-                        home_mean_win.reshape(-1, 1), home_avg_win.reshape(-1, 1)))
-    all_X = np.concatenate((home_X, away_X), axis=0)
-    # this reflects the HPAvg, APAvg, HPMean, APMean used in building the model
-    return all_X
+    home_loc_form, home_form, home_season = calc_avg(home, 'home_form')
+    away_loc_form, away_form, away_season = calc_avg(away, 'away_form')
+    loc_form = stack_concat(home_loc_form, away_loc_form)
+    form = stack_concat(home_form, away_form)
+    season = stack_concat(home_season, away_season)
+    return [loc_form, form, season]
 
 
 def onehot_enc_goals(df, goals):
@@ -153,13 +165,14 @@ def predict_score(X, m):
     model = load_model(f'{m}.h5')
     y_pred = model.predict(X)
     goals, probs, outcome = ohe_to_goals(y_pred)
-    return goals, probs, outcome
+    return goals, probs, outcome, y_pred
 
 
-def post_data(nf, o_pred, s_pred, s_prob):
+def post_data(nf, o_pred, s_pred, s_prob, p_arr):
     oH, oA, oD = o_pred[:, 0], o_pred[:, 1], o_pred[:, 2]
     sH, sA = np.split(s_pred, 2)[0], np.split(s_pred, 2)[1]
     spH, spA = np.split(s_prob, 2)[0], np.split(s_prob, 2)[1]
+    p_arrH, p_arrA = np.split(p_arr, 2)[0], np.split(p_arr, 2)[1]
     num = 0
     for fix in nf:
         nf[fix]['home_percentage'] = round(oH[num].item() * 100, 2)
@@ -167,6 +180,8 @@ def post_data(nf, o_pred, s_pred, s_prob):
         nf[fix]['draw_percentage'] = round(oD[num].item() * 100, 2)
         nf[fix]['predicted_home_goals'] = int(sH[num].item())
         nf[fix]['predicted_away_goals'] = int(sA[num].item())
+        nf[fix]['home_goals'] = p_arrH[num].tolist()
+        nf[fix]['away_goals'] = p_arrA[num].tolist()
         nf[fix]['percentage'] = round((spH[num].item() * spA[num].item()) * 100, 2)
         num += 1
         print(nf[fix])
@@ -174,14 +189,16 @@ def post_data(nf, o_pred, s_pred, s_prob):
         json.dump(nf, f)
     # print(nf)
     requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
+    with open('predictions.json', 'w') as f:
+        json.dump(nf, f)
 
 
 def main(gwk, m):
     # teams = get_3D_XY(pd.read_csv('top_leagues/EPL_merged_avgs.csv', header=0, index_col=0, infer_datetime_format=True))
     home_teams, away_teams, next_fix = pull_data(gwk)
     score_X = get_x(home_teams, away_teams)
-    score_pred, score_prob, outcome_pred = predict_score(score_X, m)
-    post_data(next_fix, outcome_pred, score_pred, score_prob)
+    score_pred, score_prob, outcome_pred, probs_arr = predict_score(score_X, m)
+    post_data(next_fix, outcome_pred, score_pred, score_prob, probs_arr)
 
 
 if __name__ == '__main__':
@@ -194,7 +211,7 @@ if __name__ == '__main__':
         gwk = args.week
         m_score = args.model_score
     except:
-        gwk = 45
+        gwk = 46
         m_score = 'best_score_cat_model'
     finally:
         main(gwk, m_score)
