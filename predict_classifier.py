@@ -7,6 +7,7 @@ import argparse
 from keras.utils import to_categorical
 from itertools import permutations, product
 import matplotlib.pyplot as plt
+from sklearn import preprocessing
 import pandas as pd
 
 
@@ -92,13 +93,28 @@ def stack_concat(arr1, arr2):
     return arr
 
 
+def get_elo(teams):
+    elo_ratings = []
+    for team in teams:
+        team_info = requests.get(f'https://api.teamto.win/v1/teamInfo.php?team_id={team}').json()
+        elo = float(team_info['elo'])
+        elo_ratings.append(elo)
+    return np.array(elo_ratings).reshape(-1, 1)
+
+
 def get_x(home, away):
     home_loc_form, home_form, home_season = calc_avg(home, 'home_form')
     away_loc_form, away_form, away_season = calc_avg(away, 'away_form')
+    home_elo = get_elo(home)
+    away_elo = get_elo(away)
     loc_form = stack_concat(home_loc_form, away_loc_form)
     form = stack_concat(home_form, away_form)
     season = stack_concat(home_season, away_season)
-    return [loc_form, form, season]
+    elo = stack_concat(home_elo, away_elo)
+    scaler = preprocessing.MinMaxScaler()
+    elo_norm = scaler.fit_transform(elo)
+    # [loc_form, form, season, elo]
+    return [form, elo_norm]
 
 
 def onehot_enc_goals(df, goals):
@@ -137,7 +153,7 @@ def ohe_to_goals(y):
             num += 1
         goal_probs.append(gp_dict)
     outcome_prob = []
-    perms = list(product(list(range(0, 10)), repeat=2))
+    perms = list(product(list(range(0, 6)), repeat=2))
     for team in range(0, 10):
         home = goal_probs[team]
         away = goal_probs[team+10]
@@ -165,7 +181,8 @@ def predict_score(X, m):
     model = load_model(f'{m}.h5')
     y_pred = model.predict(X)
     goals, probs, outcome = ohe_to_goals(y_pred)
-    return goals, probs, outcome, y_pred
+    probs_arr = np.round_(np.multiply(y_pred, 100), decimals=2)
+    return goals, probs, outcome, probs_arr
 
 
 def post_data(nf, o_pred, s_pred, s_prob, p_arr):
@@ -178,17 +195,19 @@ def post_data(nf, o_pred, s_pred, s_prob, p_arr):
         nf[fix]['home_percentage'] = round(oH[num].item() * 100, 2)
         nf[fix]['away_percentage'] = round(oA[num].item() * 100, 2)
         nf[fix]['draw_percentage'] = round(oD[num].item() * 100, 2)
-        nf[fix]['predicted_home_goals'] = int(sH[num].item())
-        nf[fix]['predicted_away_goals'] = int(sA[num].item())
-        nf[fix]['home_goals'] = p_arrH[num].tolist()
-        nf[fix]['away_goals'] = p_arrA[num].tolist()
+        # nf[fix]['predicted_home_goals'] = int(sH[num].item())
+        # nf[fix]['predicted_away_goals'] = int(sA[num].item())
+        nf[fix]['predicted_home_goals'] = p_arrH[num].tolist()
+        nf[fix]['predicted_away_goals'] = p_arrA[num].tolist()
         nf[fix]['percentage'] = round((spH[num].item() * spA[num].item()) * 100, 2)
+        print(int(sH[num].item()), int(sA[num].item()))
         num += 1
         print(nf[fix])
+
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
     # print(nf)
-    requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
+    # requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
 
@@ -212,6 +231,6 @@ if __name__ == '__main__':
         m_score = args.model_score
     except:
         gwk = 46
-        m_score = 'best_score_cat_model'
+        m_score = 'best_score_cat_model_elo'
     finally:
         main(gwk, m_score)
