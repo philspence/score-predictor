@@ -59,14 +59,14 @@ def get_form(team_id, fix_id, location, season):
                 if form_dict[location]['fixtures'][fix]['date'] == d.strftime('%Y-%m-%d'):
                     if form_dict[location]['fixtures'][fix]['result'] == tag:
                         wins_perc += 1
-                    goals_scored += int(form_dict[location]['fixtures'][fix][f'{location}_total_goals'])
-                    goals_conceded += int(form_dict[location]['fixtures'][fix][f'{other_loc}_total_goals'])
+                    goals_scored += int(float(form_dict[location]['fixtures'][fix][f'{location}_total_goals']))
+                    goals_conceded += int(float(form_dict[location]['fixtures'][fix][f'{other_loc}_total_goals']))
             for fix in form_dict[other_loc]['fixtures']:
                 if form_dict[other_loc]['fixtures'][fix]['date'] == d.strftime('%Y-%m-%d'):
                     if form_dict[other_loc]['fixtures'][fix]['result'] == other_tag:
                         wins_perc += 1
-                    goals_scored += int(form_dict[other_loc]['fixtures'][fix][f'{other_loc}_total_goals'])
-                    goals_conceded += int(form_dict[other_loc]['fixtures'][fix][f'{location}_total_goals'])
+                    goals_scored += int(float(form_dict[other_loc]['fixtures'][fix][f'{other_loc}_total_goals']))
+                    goals_conceded += int(float(form_dict[other_loc]['fixtures'][fix][f'{location}_total_goals']))
         wins_perc /= 5
         goals_scored /= 5
         goals_conceded /= 5
