@@ -96,15 +96,16 @@ def get_data(infile):
     yH = onehot_enc_goals(data, 'HomeGoals')
     yA = onehot_enc_goals(data, 'AwayGoals')
     y = np.concatenate((yH, yA), axis=0)
-    X = np.hstack((X_form, X_elo_norm, X_loc_form, X_goals, X_season))
-    return X_loc_form, X_form, X_season, X_elo, X_goals, y, data, X
+    X = np.hstack((X_formH, X_eloH, X_loc_formH, X_goalsH, X_seasonH))
+    return X_loc_form, X_form, X_season, X_elo, X_goals, yH, data, X
 
 
 def predictions(model, X, data, inf, y):
     y_pred = model.predict(X)
     goals, probs = ohe_to_goals(y_pred)
-    data['HGPred'], data['AGPred'] = np.split(goals, 2)[0], np.split(goals, 2)[1]
-    data['HGProb'], data['AGProb'] = np.split(probs, 2)[0], np.split(probs, 2)[1]
+    # data['HGPred'], data['AGPred'] = np.split(goals, 2)[0], np.split(goals, 2)[1]
+    # data['HGProb'], data['AGProb'] = np.split(probs, 2)[0], np.split(probs, 2)[1]
+    data['HGPred'], data['HGProb'] = goals, probs
     data.to_csv(f'{inf}_preds.csv')
     print(data.head(20).to_string())
     print(data.tail(20).to_string())
@@ -166,6 +167,6 @@ if __name__ == '__main__':
         m = args.m  # m is now the model filename
     except:
         infile = 'EPL_form_elo_API'
-        m = 'score_cat_model_elo'
+        m = 'score_cat_model_elo_home'
     finally:
         main(infile, m)  # run the function main() and give it infile and m
