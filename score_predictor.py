@@ -20,26 +20,26 @@ import pickle
 
 
 def build_model():
-    # model = Sequential()
-    # model.add(Dense(1024, activation='relu', input_dim=6))
-    # model.add(Dense(512, activation='relu'))
-    # model.add(Dense(6, activation='softmax'))
-    loc_form = Input((2,))
-    form = Input((2,))
-    # season = Input((2,))
-    elo = Input((2,))
-    dense_size = 2
-    act = 'relu'
-    loc_form_dense = Dense(dense_size, activation=act)(loc_form)
-    form_dense = Dense(dense_size, activation=act)(form)
-    # season_dense = Dense(dense_size, activation=act)(season)
-    elo_dense = Dense(dense_size, activation=act)(elo)
-    # all 4 model used loc_form_dense, form_dense, season_dense, elo_dense
-    concat = Concatenate()([loc_form_dense, form_dense, elo_dense])
-    concat_dense = Dense(6, activation=act)(concat)
-    output_layer = Dense(6, activation='softmax')(concat_dense)
-    # loc_form, form, season, elo
-    model = Model(inputs=[loc_form, form, elo], outputs=output_layer)
+    model = Sequential()
+    model.add(Dense(8, activation='relu', input_dim=8))
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(6, activation='softmax'))
+    # loc_form = Input((2,))
+    # form = Input((2,))
+    # # season = Input((2,))
+    # elo = Input((2,))
+    # dense_size = 2
+    # act = 'relu'
+    # loc_form_dense = Dense(dense_size, activation=act)(loc_form)
+    # form_dense = Dense(dense_size, activation=act)(form)
+    # # season_dense = Dense(dense_size, activation=act)(season)
+    # elo_dense = Dense(dense_size, activation=act)(elo)
+    # # all 4 model used loc_form_dense, form_dense, season_dense, elo_dense
+    # concat = Concatenate()([loc_form_dense, form_dense, elo_dense])
+    # concat_dense = Dense(6, activation=act)(concat)
+    # output_layer = Dense(6, activation='softmax')(concat_dense)
+    # # loc_form, form, season, elo
+    # model = Model(inputs=[loc_form, form, elo], outputs=output_layer)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return model
 
@@ -82,19 +82,22 @@ def get_data(infile):
     X_seasonA = data[['AwayTeamSeasonWinPerc', 'HomeTeamSeasonWinPerc']]
     X_eloH = data[['HomeElo', 'AwayElo']]
     X_eloA = data[['AwayElo', 'HomeElo']]
+    X_goalsH = data[['HomeScored', 'AwayConceded']]
+    X_goalsA = data[['AwayScored', 'HomeConceded']]
     # concat all three
     X_loc_form = np.concatenate((X_loc_formH, X_loc_formA), axis=0)
     X_form = np.concatenate((X_formH, X_formA), axis=0)
     X_season = np.concatenate((X_seasonH, X_seasonA), axis=0)
     X_elo = np.concatenate((X_eloH, X_eloA), axis=0)
+    X_goals = np.concatenate((X_goalsH, X_goalsA), axis=0)
     scaler = preprocessing.MinMaxScaler()
     X_elo_norm = scaler.fit_transform(X_elo)
     # X = np.concatenate((XH, XA), axis=0)
     yH = onehot_enc_goals(data, 'HomeGoals')
     yA = onehot_enc_goals(data, 'AwayGoals')
     y = np.concatenate((yH, yA), axis=0)
-    X = np.hstack((X_form, X_elo_norm, X_loc_form))
-    return X_loc_form, X_form, X_season, X_elo_norm, y, data, X
+    X = np.hstack((X_form, X_elo_norm, X_loc_form, X_goals))
+    return X_loc_form, X_form, X_season, X_elo_norm, X_goals, y, data, X
 
 
 def predictions(model, X, data, inf, y):
@@ -115,12 +118,13 @@ def get_class_weights(y):
 
 
 def main(infile, m):
-    X_loc, X_form, X_season, X_elo, y, data, X = get_data(infile)
+    X_loc, X_form, X_season, X_elo, X_goals, y, data, X = get_data(infile)
     X_train, X_test = train_test_split(X, test_size=0.33, random_state=42)
     X_loc_train, X_loc_test = train_test_split(X_loc, test_size=0.33, random_state=42)
     X_form_train, X_form_test = train_test_split(X_form, test_size=0.33, random_state=42)
     X_season_train, X_season_test = train_test_split(X_season, test_size=0.33, random_state=42)
     X_elo_train, X_elo_test = train_test_split(X_elo, test_size=0.33, random_state=42)
+    X_goals_train, X_goals_test = train_test_split(X_goals, test_size=0.33, random_state=42)
     y_train, y_test = train_test_split(y, test_size=0.33, random_state=42)
     early_stopping = [EarlyStopping(monitor='val_loss', patience=8),
                       ModelCheckpoint(filepath=f'best_{m}.h5', monitor='val_loss',
@@ -130,9 +134,9 @@ def main(infile, m):
     cw = {0: 0.57, 1: 0.49, 2: 0.76, 3: 0.76, 4: 0.57, 5: 0.57}
     model = build_model()
     # all 4 model used [X_loc_train, X_form_train, X_season_train, X_elo_train]
-    history = model.fit([X_loc_train, X_form_train, X_elo_train], y_train, epochs=100, verbose=1,
-                        validation_data=([X_loc_test, X_form_test, X_elo_test], y_test), batch_size=10,
-                        callbacks=early_stopping)
+    history = model.fit(X_train, y_train, epochs=100, verbose=1,
+                        validation_data=(X_test, y_test), batch_size=10,
+                        callbacks=early_stopping, class_weight=class_weights)
     loss = history.history['loss']
     val_loss = history.history['val_loss']
     acc = history.history['categorical_accuracy']
@@ -146,7 +150,7 @@ def main(infile, m):
     plt.legend(['acc', 'val_acc'])
     plt.show()
     # X_loc, X_form, X_season, X_elo
-    predictions(model, [X_loc, X_form, X_elo], data, infile, y)
+    predictions(model, X, data, infile, y)
     model.save(f'{m}.h5')
     model.save_weights(f'{m}_weights.h5')
 
