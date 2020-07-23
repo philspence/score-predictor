@@ -21,9 +21,9 @@ import pickle
 
 def build_model():
     model = Sequential()
-    model.add(Dense(8, activation='relu', input_dim=8))
+    model.add(Dense(16, activation='relu', input_dim=10))
     model.add(Dense(16, activation='relu'))
-    model.add(Dense(6, activation='softmax'))
+    model.add(Dense(5, activation='softmax'))
     # loc_form = Input((2,))
     # form = Input((2,))
     # # season = Input((2,))
@@ -48,8 +48,8 @@ def onehot_enc_goals(df, goals):
     goals = df[goals].to_numpy()
     goals_shortened = []
     for goal in goals:
-        if goal > 4:
-            goals_shortened.append(5)
+        if goal > 3:
+            goals_shortened.append(4)
         else:
             goals_shortened.append(goal)
     gs_np = np.array(goals_shortened).reshape(-1, 1)
@@ -96,8 +96,8 @@ def get_data(infile):
     yH = onehot_enc_goals(data, 'HomeGoals')
     yA = onehot_enc_goals(data, 'AwayGoals')
     y = np.concatenate((yH, yA), axis=0)
-    X = np.hstack((X_form, X_elo_norm, X_loc_form, X_goals))
-    return X_loc_form, X_form, X_season, X_elo_norm, X_goals, y, data, X
+    X = np.hstack((X_form, X_elo_norm, X_loc_form, X_goals, X_season))
+    return X_loc_form, X_form, X_season, X_elo, X_goals, y, data, X
 
 
 def predictions(model, X, data, inf, y):
@@ -136,19 +136,19 @@ def main(infile, m):
     # all 4 model used [X_loc_train, X_form_train, X_season_train, X_elo_train]
     history = model.fit(X_train, y_train, epochs=100, verbose=1,
                         validation_data=(X_test, y_test), batch_size=10,
-                        callbacks=early_stopping, class_weight=class_weights)
+                        callbacks=early_stopping)
     loss = history.history['loss']
     val_loss = history.history['val_loss']
     acc = history.history['categorical_accuracy']
     val_acc = history.history['val_categorical_accuracy']
-    plt.plot(loss)
-    plt.plot(val_loss),
-    plt.legend(['loss', 'val_loss'])
-    plt.show()
-    plt.plot(acc)
-    plt.plot(val_acc)
-    plt.legend(['acc', 'val_acc'])
-    plt.show()
+    # plt.plot(loss)
+    # plt.plot(val_loss),
+    # plt.legend(['loss', 'val_loss'])
+    # plt.show()
+    # plt.plot(acc)
+    # plt.plot(val_acc)
+    # plt.legend(['acc', 'val_acc'])
+    # plt.show()
     # X_loc, X_form, X_season, X_elo
     predictions(model, X, data, infile, y)
     model.save(f'{m}.h5')
