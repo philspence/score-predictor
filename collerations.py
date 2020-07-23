@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('top_leagues/EPL_merged_avgs_shots_test.csv', index_col=0, header=0)
+data = pd.read_csv('EPL_form_elo_API.csv', header=0)
 corr = data.corr()
 print(corr.to_csv('correlations.csv'))
 print(corr.to_string())
