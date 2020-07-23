@@ -143,7 +143,7 @@ def get_data():
     headers = ['HomeTeamHomeForm', 'HomeTeamForm', 'HomeTeamSeasonWinPerc',
                'AwayTeamAwayForm', 'AwayTeamForm', 'AwayTeamSeasonWinPerc',
                'HomeElo', 'AwayElo',
-               'HomeScored' 'HomeConceded', 'AwayScored', 'AwayConceded',
+               'HomeScored', 'HomeConceded', 'AwayScored', 'AwayConceded',
                'HomeGoals', 'AwayGoals']
     for fix in fixtures_dict:
         fix_id = int(fixtures_dict[fix]['fixture_id'])
