@@ -1,3 +1,5 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import requests
 import numpy as np
 from keras.models import load_model
@@ -11,61 +13,6 @@ from sklearn import preprocessing
 import pandas as pd
 
 
-def calc_avg(tms, ha):
-    wld_dict = {'W': 1, 'L': 0, 'D': 0}
-    loc_wins = []
-    form_wins = []
-    season_wins = []
-    for t in tms:
-        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=3').json()
-        loc_win_avg = 0
-        for match in form[ha]['form']:
-            val = form[ha]['form'][match]
-            loc_win_avg += wld_dict[val]
-        loc_wins.append(loc_win_avg / 3)
-        num = 0
-        wins = 0
-        while num < 5:
-            for match in form['all_form']:
-                if form['all_form'][match] == 'W':
-                    wins += 1
-                num += 1
-        form_wins.append(wins / 5)
-        win_ratio = (form['season_form']['home']['win_percentage'] + form['season_form']['away']['win_percentage']) / 2
-        season_wins.append(win_ratio / 100)
-    loc_wins = np.array(loc_wins).reshape(-1, 1)
-    form_wins = np.array(form_wins).reshape(-1, 1)
-    season_wins = np.array(season_wins).reshape(-1, 1)
-    return loc_wins, form_wins, season_wins
-
-
-def calc_season(tms, ha):
-    mean_wins = []
-    for t in tms:
-        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}').json()
-        win_ratio = form['season_form'][ha]['win_percentage']
-        mean_wins.append(win_ratio/100)
-    np_arr = np.array([mean_wins])
-    np_arr = np_arr.reshape(-1, 1)
-    return np_arr
-
-
-def calc_goals(tms, ha, prop):
-    avg_goals = []
-    for t in tms:
-        form = requests.get(f'https://api.teamto.win/v1/teamForm.php?team_id={t}&fixtures=5').json()
-        goals = 0
-        for match in form[ha]:
-            if match == 'form':
-                continue
-            else:
-                goals += int(form[ha][match][prop])
-        avg_goals.append(goals / 3)
-    np_arr = np.array([avg_goals])
-    np_arr = np_arr.reshape(-1, 1)
-    return np_arr
-
-
 def pull_data(gwk):
     next_fix = requests.get(f'https://api.teamto.win/v1/gameweekFixtures.php?gameweek={gwk}').json()
     # teams = requests.get('https://api.teamto.win/v1/listOfTeams.php?').json()
@@ -75,15 +22,6 @@ def pull_data(gwk):
         home_teams.append(next_fix[fix]['home_team_id'])
         away_teams.append(next_fix[fix]['away_team_id'])
     return home_teams, away_teams, next_fix
-
-
-def get_score_x(home, away):
-    home_avg_goals = calc_goals(home, 'home_form', 'goals_scored')
-    away_avg_conc = calc_goals(away, 'away_form', 'goals_conceded')
-    away_avg_goals = calc_goals(home, 'away_form', 'goals_scored')
-    home_avg_conc = calc_goals(away, 'home_form', 'goals_conceded')
-    all = np.hstack((home_avg_goals, away_avg_conc, away_avg_goals, home_avg_conc))
-    return all
 
 
 def stack_concat(arr1, arr2):
@@ -103,18 +41,12 @@ def get_elo(teams):
 
 
 def get_x(home, away):
-    home_loc_form, home_form, home_season = calc_avg(home, 'home_form')
-    away_loc_form, away_form, away_season = calc_avg(away, 'away_form')
     home_elo = get_elo(home)
     away_elo = get_elo(away)
-    loc_form = stack_concat(home_loc_form, away_loc_form)
-    form = stack_concat(home_form, away_form)
-    season = stack_concat(home_season, away_season)
     elo = stack_concat(home_elo, away_elo)
     scaler = preprocessing.MinMaxScaler()
     elo_norm = scaler.fit_transform(elo)
-    # [loc_form, form, season, elo]
-    return [form, elo_norm]
+    return elo
 
 
 def onehot_enc_goals(df, goals):
@@ -153,10 +85,11 @@ def ohe_to_goals(y):
             num += 1
         goal_probs.append(gp_dict)
     outcome_prob = []
-    perms = list(product(list(range(0, 6)), repeat=2))
-    for team in range(0, 10):
+    perms = list(product(list(range(0, 5)), repeat=2))
+    for team in range(0, int(len(y) / 2)):
         home = goal_probs[team]
-        away = goal_probs[team+10]
+        opposite_team = team + int(len(y) / 2)
+        away = goal_probs[opposite_team]
         # plot_goal_probs(home, away)
         h_chance = 0
         a_chance = 0
@@ -172,13 +105,9 @@ def ohe_to_goals(y):
     return np.array(goals), np.array(probs), np.array(outcome_prob)
 
 
-def get_3D_XY(df):
-    teams_3D = [df.groupby(['HomeTeam', 'Season'])['FTHG'].unique()]
-    return teams_3D
-
-
 def predict_score(X, m):
-    model = load_model(f'{m}.h5')
+    model = load_model(f'best_{m}.h5')
+    model.load_weights(f'{m}_weights.h5')
     y_pred = model.predict(X)
     goals, probs, outcome = ohe_to_goals(y_pred)
     probs_arr = np.round_(np.multiply(y_pred, 100), decimals=2)
@@ -207,7 +136,7 @@ def post_data(nf, o_pred, s_pred, s_prob, p_arr):
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
     # print(nf)
-    # requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
+    requests.post('https://api.teamto.win/v1/savePrediction.php', json.dumps(nf))
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
 
@@ -230,7 +159,7 @@ if __name__ == '__main__':
         gwk = args.week
         m_score = args.model_score
     except:
-        gwk = 46
-        m_score = 'best_score_cat_model_elo'
+        gwk = 1
+        m_score = 'score_cat_model_elo'
     finally:
         main(gwk, m_score)
