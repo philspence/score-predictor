@@ -121,22 +121,6 @@ def onehot_enc_goals(df, goals):
     return to_categorical(df[goals])
 
 
-def plot_goal_probs(h, a):
-    h_probs = [v for k, v in h.items()]
-    a_probs = [v for k, v in a.items()]
-    x = np.arange(len(h_probs))
-    width = 0.35
-    fig, ax = plt.subplots()
-    ax.bar(x - width/2, h_probs, width, label='Home')
-    ax.bar(x + width/2, a_probs, width, label='Away')
-    ax.set_ylabel('Probability')
-    ax.set_title('Predicted Goals')
-    ax.legend()
-    fig.tight_layout()
-    plt.savefig('Liverpool-Palace.png', dpi=300)
-    plt.show()
-
-
 def ohe_to_goals(y):
     goals = []
     probs = []
@@ -157,7 +141,6 @@ def ohe_to_goals(y):
     for team in range(0, 10):
         home = goal_probs[team]
         away = goal_probs[team+10]
-        # plot_goal_probs(home, away)
         h_chance = 0
         a_chance = 0
         draw = 0
@@ -170,11 +153,6 @@ def ohe_to_goals(y):
                 draw += (home[perm[0]] * away[perm[1]])
         outcome_prob.append([h_chance, a_chance, draw])
     return np.array(goals), np.array(probs), np.array(outcome_prob)
-
-
-def get_3D_XY(df):
-    teams_3D = [df.groupby(['HomeTeam', 'Season'])['FTHG'].unique()]
-    return teams_3D
 
 
 def predict_score(X, m):
