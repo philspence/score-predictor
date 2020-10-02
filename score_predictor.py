@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
-from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.ensemble import GradientBoostingClassifier
+from itertools import product
 import requests
 import json
 import pickle
@@ -157,24 +157,42 @@ def calc_form(tms, ha):
     return loc_wins, form_wins, season_wins
 
 
+def get_outcome_pred(home, away):
+    outcome_prob = list()
+    perms = list(product(list(range(0, len(home))), repeat=2))
+    h_chance = 0
+    a_chance = 0
+    draw = 0
+    for perm in perms:
+        if perm[0] > perm[1]:
+            h_chance += (home[perm[0]] * away[perm[1]])
+        elif perm[0] < perm[1]:
+            a_chance += (home[perm[0]] * away[perm[1]])
+        elif perm[0] == perm[1]:
+            draw += (home[perm[0]] * away[perm[1]])
+    outcome_prob.append([h_chance, a_chance, draw])
+    return h_chance, a_chance, draw
+
+
 def post_data(nf,  s_pred, s_prob):
-    # oH, oA, oD = o_pred[:, 0], o_pred[:, 1], o_pred[:, 2]
     sH, sA = np.split(s_pred, 2)[0], np.split(s_pred, 2)[1]
     spH, spA = np.split(s_prob, 2)[0], np.split(s_prob, 2)[1]
-    # p_arrH, p_arrA = np.split(p_arr, 2)[0], np.split(p_arr, 2)[1]
     num = 0
     for fix in nf:
-        # nf[fix]['home_percentage'] = round(oH[num].item() * 100, 2)
-        # nf[fix]['away_percentage'] = round(oA[num].item() * 100, 2)
-        # nf[fix]['draw_percentage'] = round(oD[num].item() * 100, 2)
+        home, away, draw = get_outcome_pred(spH[num], spA[num])
+        nf[fix]['home_percentage'] = round(home * 100, 2)
+        nf[fix]['away_percentage'] = round(away * 100, 2)
+        nf[fix]['draw_percentage'] = round(draw * 100, 2)
         nf[fix]['predicted_home_goals'] = round(sH[num].item(), 2)
         nf[fix]['predicted_away_goals'] = round(sA[num].item(), 2)
         nf[fix]['probability_home_goals'] = round(spH[num][sH[num]].item(), 2)
         nf[fix]['probability_away_goals'] = round(spA[num][sA[num]].item(), 2)
-        nf[fix]['percentage'] = round((spH[num][sH[num]].item() * spA[num][sA[num]].item()) * 100, 2)
+        perc = round((spH[num][sH[num]].item() * spA[num][sA[num]].item()) * 100, 2)
+        nf[fix]['percentage'] = perc
         num += 1
         print(f'{nf[fix]["home_team_name"]} {nf[fix]["predicted_home_goals"]} vs '
-              f'{nf[fix]["predicted_away_goals"]} {nf[fix]["away_team_name"]}')
+              f'{nf[fix]["predicted_away_goals"]} {nf[fix]["away_team_name"]} '
+              f'({round(home * 100, 2)}, {round(draw * 100, 2)}, {round(away * 100, 2)}) | {perc}')
     with open('predictions.json', 'w') as f:
         json.dump(nf, f)
     # print(nf)
