@@ -159,7 +159,7 @@ if __name__ == '__main__':
         gwk = args.week
         m_score = args.model_score
     except:
-        gwk = 1
+        gwk = 4
         m_score = 'score_cat_model_elo'
     finally:
         main(gwk, m_score)
